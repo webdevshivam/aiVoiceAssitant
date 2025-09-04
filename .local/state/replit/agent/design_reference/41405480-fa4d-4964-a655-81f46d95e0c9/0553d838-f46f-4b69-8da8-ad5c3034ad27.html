@@ -1,0 +1,544 @@
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI Voice Sales Assistant</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Google+Sans:wght@300;400;500;600;700&family=Roboto:wght@300;400;500;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <script>
+    tailwind.config = {
+        theme: {
+            extend: {
+                borderRadius: {
+                    lg: "var(--radius)",
+                    md: "calc(var(--radius) - 2px)",
+                    sm: "calc(var(--radius) - 4px)",
+                },
+                colors: {
+                    background: "var(--background)",
+                    foreground: "var(--foreground)",
+                    card: {
+                        DEFAULT: "var(--card)",
+                        foreground: "var(--card-foreground)",
+                    },
+                    primary: {
+                        DEFAULT: "var(--primary)",
+                        foreground: "var(--primary-foreground)",
+                    },
+                    secondary: {
+                        DEFAULT: "var(--secondary)",
+                        foreground: "var(--secondary-foreground)",
+                    },
+                    muted: {
+                        DEFAULT: "var(--muted)",
+                        foreground: "var(--muted-foreground)",
+                    },
+                    accent: {
+                        DEFAULT: "var(--accent)",
+                        foreground: "var(--accent-foreground)",
+                    },
+                    destructive: {
+                        DEFAULT: "var(--destructive)",
+                        foreground: "var(--destructive-foreground)",
+                    },
+                    border: "var(--border)",
+                    input: "var(--input)",
+                    ring: "var(--ring)",
+                },
+                fontFamily: {
+                    sans: ["Google Sans", "Roboto", "sans-serif"],
+                }
+            },
+        }
+    };
+    </script>
+    <style>
+        :root {
+            --background: hsl(0 0% 98%); /* #FAFAFA */
+            --foreground: hsl(210 11% 13%); /* #202124 */
+            --card: hsl(0 0% 100%);
+            --card-foreground: hsl(210 11% 13%);
+            --primary: hsl(217 89% 61%); /* #4285F4 */
+            --primary-foreground: hsl(0 0% 100%);
+            --secondary: hsl(142 76% 36%); /* #34A853 */
+            --secondary-foreground: hsl(0 0% 100%);
+            --muted: hsl(0 0% 96%);
+            --muted-foreground: hsl(210 11% 13%);
+            --accent: hsl(4 90% 58%); /* #EA4335 */
+            --accent-foreground: hsl(0 0% 100%);
+            --destructive: hsl(4 90% 58%);
+            --destructive-foreground: hsl(0 0% 100%);
+            --border: hsl(0 0% 89%);
+            --input: hsl(0 0% 100%);
+            --ring: hsl(217 89% 61%);
+            --voice-active: hsl(24 100% 50%); /* #FF6D00 */
+            --radius: 8px;
+        }
+
+        .voice-pulse {
+            animation: pulse 2s infinite;
+        }
+
+        .voice-recording {
+            animation: recording-pulse 1s infinite;
+            background: var(--voice-active);
+        }
+
+        @keyframes pulse {
+            0%, 100% { transform: scale(1); opacity: 1; }
+            50% { transform: scale(1.05); opacity: 0.8; }
+        }
+
+        @keyframes recording-pulse {
+            0%, 100% { transform: scale(1); }
+            50% { transform: scale(1.1); }
+        }
+
+        .waveform {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 2px;
+        }
+
+        .wave-bar {
+            width: 3px;
+            background: var(--primary);
+            border-radius: 2px;
+            animation: wave 1.5s infinite ease-in-out;
+        }
+
+        .wave-bar:nth-child(2) { animation-delay: 0.1s; }
+        .wave-bar:nth-child(3) { animation-delay: 0.2s; }
+        .wave-bar:nth-child(4) { animation-delay: 0.3s; }
+        .wave-bar:nth-child(5) { animation-delay: 0.4s; }
+
+        @keyframes wave {
+            0%, 40%, 100% { height: 8px; }
+            20% { height: 24px; }
+        }
+
+        .conversation-bubble {
+            max-width: 80%;
+            word-wrap: break-word;
+        }
+
+        .conversation-bubble.user {
+            margin-left: auto;
+            background: var(--primary);
+            color: var(--primary-foreground);
+        }
+
+        .conversation-bubble.ai {
+            margin-right: auto;
+            background: var(--muted);
+            color: var(--muted-foreground);
+        }
+    </style>
+</head>
+<body class="bg-background text-foreground font-sans min-h-screen">
+    <!-- @COMPONENT: Header -->
+    <header class="bg-card border-b border-border shadow-sm">
+        <div class="container mx-auto px-4 py-4">
+            <div class="flex items-center justify-between">
+                <div class="flex items-center space-x-3">
+                    <div class="w-10 h-10 bg-primary rounded-full flex items-center justify-center">
+                        <i class="fas fa-microphone text-primary-foreground text-lg"></i>
+                    </div>
+                    <div>
+                        <h1 class="text-xl font-semibold text-foreground">AI Voice Sales Assistant</h1>
+                        <p class="text-sm text-muted-foreground">Intelligent Voice-Powered Sales Conversations</p>
+                    </div>
+                </div>
+                <div class="flex items-center space-x-3">
+                    <!-- @STATE: isConnected:boolean = true -->
+                    <div class="flex items-center space-x-2">
+                        <div class="w-2 h-2 bg-secondary rounded-full"></div>
+                        <span class="text-sm text-muted-foreground">Connected</span>
+                    </div>
+                    <button class="p-2 hover:bg-muted rounded-lg transition-colors" data-event="click:openSettings">
+                        <i class="fas fa-cog text-muted-foreground"></i>
+                    </button>
+                </div>
+            </div>
+        </div>
+    </header>
+    <!-- @END_COMPONENT: Header -->
+
+    <main class="container mx-auto px-4 py-8 max-w-6xl">
+        <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
+            
+            <!-- @COMPONENT: SetupPanel -->
+            <div class="lg:col-span-1 space-y-6">
+                <!-- API Configuration -->
+                <div class="bg-card rounded-lg shadow-sm border border-border p-6">
+                    <h2 class="text-lg font-semibold mb-4 flex items-center">
+                        <i class="fas fa-key text-primary mr-2"></i>
+                        API Configuration
+                    </h2>
+                    <div class="space-y-4">
+                        <div>
+                            <label class="block text-sm font-medium mb-2" for="apiKey">Gemini API Key</label>
+                            <input 
+                                type="password" 
+                                id="apiKey"
+                                placeholder="Enter your Gemini API key"
+                                class="w-full px-3 py-2 border border-border rounded-md bg-input focus:ring-2 focus:ring-ring focus:border-ring outline-none transition-colors"
+                                data-bind="apiKey"
+                                data-mock="true"
+                            />
+                        </div>
+                        <div class="flex items-center justify-between">
+                            <span class="text-sm text-muted-foreground">API Status</span>
+                            <span class="text-sm text-secondary font-medium" data-bind="apiStatus">Ready</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Sales Prompt Configuration -->
+                <div class="bg-card rounded-lg shadow-sm border border-border p-6">
+                    <h2 class="text-lg font-semibold mb-4 flex items-center">
+                        <i class="fas fa-bullhorn text-primary mr-2"></i>
+                        Sales Prompt
+                    </h2>
+                    <div class="space-y-4">
+                        <div>
+                            <label class="block text-sm font-medium mb-2" for="salesPrompt">What should the AI sell?</label>
+                            <textarea 
+                                id="salesPrompt"
+                                rows="4"
+                                placeholder="e.g., Sell this premium ballpoint pen with its smooth writing experience and elegant design..."
+                                class="w-full px-3 py-2 border border-border rounded-md bg-input focus:ring-2 focus:ring-ring focus:border-ring outline-none transition-colors resize-none"
+                                data-bind="salesPrompt"
+                                data-mock="true"
+                            >Sell this premium ballpoint pen with its smooth writing experience and elegant design</textarea>
+                        </div>
+                        <div class="flex space-x-2">
+                            <button class="flex-1 bg-primary text-primary-foreground px-4 py-2 rounded-md hover:opacity-90 transition-opacity text-sm font-medium" data-event="click:saveSalesPrompt">
+                                Save Prompt
+                            </button>
+                            <button class="px-4 py-2 border border-border rounded-md hover:bg-muted transition-colors text-sm" data-event="click:clearPrompt">
+                                Clear
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Voice Settings -->
+                <div class="bg-card rounded-lg shadow-sm border border-border p-6">
+                    <h2 class="text-lg font-semibold mb-4 flex items-center">
+                        <i class="fas fa-volume-up text-primary mr-2"></i>
+                        Voice Settings
+                    </h2>
+                    <div class="space-y-4">
+                        <div>
+                            <label class="block text-sm font-medium mb-2">Voice Type</label>
+                            <select class="w-full px-3 py-2 border border-border rounded-md bg-input focus:ring-2 focus:ring-ring focus:border-ring outline-none" data-bind="voiceType">
+                                <option>Professional Male</option>
+                                <option>Professional Female</option>
+                                <option>Friendly Male</option>
+                                <option>Friendly Female</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium mb-2">Speech Speed</label>
+                            <input type="range" min="0.5" max="2" step="0.1" value="1" class="w-full" data-bind="speechSpeed" />
+                            <div class="flex justify-between text-xs text-muted-foreground mt-1">
+                                <span>Slow</span>
+                                <span>Normal</span>
+                                <span>Fast</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <!-- @END_COMPONENT: SetupPanel -->
+
+            <!-- @COMPONENT: VoiceInterface -->
+            <div class="lg:col-span-2 space-y-6">
+                <!-- Main Voice Control -->
+                <div class="bg-card rounded-lg shadow-sm border border-border p-8 text-center">
+                    <div class="space-y-6">
+                        <!-- @STATE: isRecording:boolean = false -->
+                        <!-- @STATE: isProcessing:boolean = false -->
+                        <!-- @STATE: conversationActive:boolean = false -->
+                        
+                        <!-- Status Display -->
+                        <div class="text-center">
+                            <div class="text-lg font-medium text-foreground mb-2" data-bind="conversationStatus">Ready to Start Sales Conversation</div>
+                            <div class="text-sm text-muted-foreground" data-bind="conversationSubtitle">Click the microphone to begin</div>
+                        </div>
+
+                        <!-- Main Microphone Button -->
+                        <div class="flex justify-center">
+                            <button 
+                                class="w-32 h-32 bg-primary rounded-full flex items-center justify-center shadow-lg hover:shadow-xl transition-all voice-pulse"
+                                data-event="click:toggleRecording"
+                                data-implementation="Should toggle voice recording and manage conversation state"
+                            >
+                                <i class="fas fa-microphone text-primary-foreground text-4xl"></i>
+                            </button>
+                        </div>
+
+                        <!-- Audio Waveform Visualization -->
+                        <div class="flex justify-center">
+                            <div class="waveform" style="display: none;" data-bind="waveformVisible">
+                                <div class="wave-bar"></div>
+                                <div class="wave-bar"></div>
+                                <div class="wave-bar"></div>
+                                <div class="wave-bar"></div>
+                                <div class="wave-bar"></div>
+                            </div>
+                        </div>
+
+                        <!-- Action Buttons -->
+                        <div class="flex justify-center space-x-4">
+                            <button class="bg-secondary text-secondary-foreground px-6 py-2 rounded-md hover:opacity-90 transition-opacity flex items-center space-x-2" data-event="click:startConversation">
+                                <i class="fas fa-play text-sm"></i>
+                                <span>Start Sales Call</span>
+                            </button>
+                            <button class="bg-accent text-accent-foreground px-6 py-2 rounded-md hover:opacity-90 transition-opacity flex items-center space-x-2" data-event="click:endConversation">
+                                <i class="fas fa-stop text-sm"></i>
+                                <span>End Call</span>
+                            </button>
+                        </div>
+
+                        <!-- Quick Stats -->
+                        <div class="grid grid-cols-3 gap-4 mt-6 pt-6 border-t border-border">
+                            <div class="text-center">
+                                <div class="text-2xl font-semibold text-primary" data-bind="conversationTime">00:00</div>
+                                <div class="text-xs text-muted-foreground">Duration</div>
+                            </div>
+                            <div class="text-center">
+                                <div class="text-2xl font-semibold text-secondary" data-bind="messageCount">0</div>
+                                <div class="text-xs text-muted-foreground">Messages</div>
+                            </div>
+                            <div class="text-center">
+                                <div class="text-2xl font-semibold text-accent" data-bind="salesScore">--</div>
+                                <div class="text-xs text-muted-foreground">Sales Score</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Real-time Conversation Display -->
+                <div class="bg-card rounded-lg shadow-sm border border-border p-6">
+                    <div class="flex items-center justify-between mb-4">
+                        <h2 class="text-lg font-semibold flex items-center">
+                            <i class="fas fa-comments text-primary mr-2"></i>
+                            Live Conversation
+                        </h2>
+                        <div class="flex items-center space-x-2">
+                            <button class="p-2 hover:bg-muted rounded-lg transition-colors" data-event="click:exportConversation">
+                                <i class="fas fa-download text-muted-foreground text-sm"></i>
+                            </button>
+                            <button class="p-2 hover:bg-muted rounded-lg transition-colors" data-event="click:clearConversation">
+                                <i class="fas fa-trash text-muted-foreground text-sm"></i>
+                            </button>
+                        </div>
+                    </div>
+                    
+                    <!-- @MAP: conversationMessages.map(message => ( -->
+                    <div class="space-y-4 max-h-96 overflow-y-auto" data-bind="conversationContainer">
+                        <!-- Sample conversation messages for mockup -->
+                        <div class="conversation-bubble ai rounded-lg p-3" data-mock="true">
+                            <div class="flex items-start space-x-2">
+                                <div class="w-8 h-8 bg-primary rounded-full flex items-center justify-center flex-shrink-0">
+                                    <i class="fas fa-robot text-primary-foreground text-xs"></i>
+                                </div>
+                                <div>
+                                    <div class="text-sm font-medium mb-1">AI Sales Assistant</div>
+                                    <div class="text-sm">Hello! I'd love to tell you about this amazing premium ballpoint pen. What kind of writing do you do most often?</div>
+                                    <div class="text-xs text-muted-foreground mt-1">2:34 PM</div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="conversation-bubble user rounded-lg p-3" data-mock="true">
+                            <div class="flex items-start space-x-2 justify-end">
+                                <div>
+                                    <div class="text-sm font-medium mb-1 text-right">Customer</div>
+                                    <div class="text-sm">I mostly take notes during meetings and sign documents.</div>
+                                    <div class="text-xs text-primary-foreground/70 mt-1 text-right">2:35 PM</div>
+                                </div>
+                                <div class="w-8 h-8 bg-muted rounded-full flex items-center justify-center flex-shrink-0">
+                                    <i class="fas fa-user text-muted-foreground text-xs"></i>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="conversation-bubble ai rounded-lg p-3" data-mock="true">
+                            <div class="flex items-start space-x-2">
+                                <div class="w-8 h-8 bg-primary rounded-full flex items-center justify-center flex-shrink-0">
+                                    <i class="fas fa-robot text-primary-foreground text-xs"></i>
+                                </div>
+                                <div>
+                                    <div class="text-sm font-medium mb-1">AI Sales Assistant</div>
+                                    <div class="text-sm">Perfect! This pen is ideal for professionals like you. The smooth gel ink flows effortlessly, making your signature look elegant and professional. Plus, the ergonomic grip reduces hand fatigue during long meetings.</div>
+                                    <div class="text-xs text-muted-foreground mt-1">2:35 PM</div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Loading indicator for when AI is processing -->
+                        <div class="conversation-bubble ai rounded-lg p-3" style="display: none;" data-bind="aiThinking">
+                            <div class="flex items-start space-x-2">
+                                <div class="w-8 h-8 bg-primary rounded-full flex items-center justify-center flex-shrink-0">
+                                    <i class="fas fa-robot text-primary-foreground text-xs"></i>
+                                </div>
+                                <div>
+                                    <div class="text-sm font-medium mb-1">AI Sales Assistant</div>
+                                    <div class="flex space-x-1">
+                                        <div class="w-2 h-2 bg-muted-foreground rounded-full animate-bounce"></div>
+                                        <div class="w-2 h-2 bg-muted-foreground rounded-full animate-bounce" style="animation-delay: 0.1s;"></div>
+                                        <div class="w-2 h-2 bg-muted-foreground rounded-full animate-bounce" style="animation-delay: 0.2s;"></div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <!-- @END_MAP )) -->
+
+                    <!-- Input for text fallback -->
+                    <div class="mt-4 pt-4 border-t border-border">
+                        <div class="flex space-x-2">
+                            <input 
+                                type="text" 
+                                placeholder="Type a message (fallback mode)..."
+                                class="flex-1 px-3 py-2 border border-border rounded-md bg-input focus:ring-2 focus:ring-ring focus:border-ring outline-none text-sm"
+                                data-bind="textInput"
+                            />
+                            <button class="bg-primary text-primary-foreground px-4 py-2 rounded-md hover:opacity-90 transition-opacity" data-event="click:sendTextMessage">
+                                <i class="fas fa-paper-plane text-sm"></i>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Performance Analytics -->
+                <div class="bg-card rounded-lg shadow-sm border border-border p-6">
+                    <h2 class="text-lg font-semibold mb-4 flex items-center">
+                        <i class="fas fa-chart-line text-primary mr-2"></i>
+                        Sales Performance
+                    </h2>
+                    <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
+                        <div class="bg-muted rounded-lg p-4 text-center">
+                            <div class="text-2xl font-bold text-primary" data-bind="engagementRate">87%</div>
+                            <div class="text-xs text-muted-foreground">Engagement</div>
+                        </div>
+                        <div class="bg-muted rounded-lg p-4 text-center">
+                            <div class="text-2xl font-bold text-secondary" data-bind="persuasionScore">92</div>
+                            <div class="text-xs text-muted-foreground">Persuasion</div>
+                        </div>
+                        <div class="bg-muted rounded-lg p-4 text-center">
+                            <div class="text-2xl font-bold text-accent" data-bind="objectionHandling">8/10</div>
+                            <div class="text-xs text-muted-foreground">Objections</div>
+                        </div>
+                        <div class="bg-muted rounded-lg p-4 text-center">
+                            <div class="text-2xl font-bold text-foreground" data-bind="conversationFlow">95%</div>
+                            <div class="text-xs text-muted-foreground">Flow Quality</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <!-- @END_COMPONENT: VoiceInterface -->
+        </div>
+    </main>
+
+    <!-- @COMPONENT: SettingsModal -->
+    <div class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4" style="display: none;" data-bind="settingsModalVisible">
+        <div class="bg-card rounded-lg shadow-xl border border-border max-w-md w-full p-6">
+            <div class="flex items-center justify-between mb-6">
+                <h2 class="text-xl font-semibold">Settings</h2>
+                <button class="p-2 hover:bg-muted rounded-lg transition-colors" data-event="click:closeSettings">
+                    <i class="fas fa-times text-muted-foreground"></i>
+                </button>
+            </div>
+            
+            <div class="space-y-4">
+                <div>
+                    <label class="block text-sm font-medium mb-2">Audio Quality</label>
+                    <select class="w-full px-3 py-2 border border-border rounded-md bg-input focus:ring-2 focus:ring-ring focus:border-ring outline-none">
+                        <option>High (48kHz)</option>
+                        <option>Standard (44.1kHz)</option>
+                        <option>Economy (22kHz)</option>
+                    </select>
+                </div>
+                
+                <div>
+                    <label class="block text-sm font-medium mb-2">Language Model</label>
+                    <select class="w-full px-3 py-2 border border-border rounded-md bg-input focus:ring-2 focus:ring-ring focus:border-ring outline-none">
+                        <option>Gemini Pro</option>
+                        <option>Gemini Flash</option>
+                        <option>Gemini Ultra</option>
+                    </select>
+                </div>
+                
+                <div class="flex items-center justify-between">
+                    <span class="text-sm font-medium">Auto-save Conversations</span>
+                    <input type="checkbox" checked class="rounded border-border focus:ring-2 focus:ring-ring" />
+                </div>
+                
+                <div class="flex items-center justify-between">
+                    <span class="text-sm font-medium">Voice Activity Detection</span>
+                    <input type="checkbox" checked class="rounded border-border focus:ring-2 focus:ring-ring" />
+                </div>
+            </div>
+            
+            <div class="flex space-x-3 mt-6">
+                <button class="flex-1 bg-primary text-primary-foreground px-4 py-2 rounded-md hover:opacity-90 transition-opacity" data-event="click:saveSettings">
+                    Save Changes
+                </button>
+                <button class="px-4 py-2 border border-border rounded-md hover:bg-muted transition-colors" data-event="click:cancelSettings">
+                    Cancel
+                </button>
+            </div>
+        </div>
+    </div>
+    <!-- @END_COMPONENT: SettingsModal -->
+
+    <script>
+        // TODO: Implement business logic, API calls, and state management
+        
+        (function() {
+            // Voice interface state management
+            let isRecording = false;
+            let conversationActive = false;
+            let audioContext;
+            let mediaRecorder;
+            
+            // Initialize voice interface
+            function initializeVoiceInterface() {
+                // TODO: Initialize Web Speech API
+                // TODO: Set up audio context for visualization
+                // TODO: Configure Gemini API client
+                console.log('Voice interface initialized');
+            }
+            
+            // Mock conversation state for demonstration
+            const mockConversation = [
+                { role: 'ai', content: 'Hello! I\'d love to tell you about this amazing premium ballpoint pen. What kind of writing do you do most often?', timestamp: '2:34 PM' },
+                { role: 'user', content: 'I mostly take notes during meetings and sign documents.', timestamp: '2:35 PM' },
+                { role: 'ai', content: 'Perfect! This pen is ideal for professionals like you. The smooth gel ink flows effortlessly, making your signature look elegant and professional. Plus, the ergonomic grip reduces hand fatigue during long meetings.', timestamp: '2:35 PM' }
+            ];
+            
+            // Initialize on page load
+            document.addEventListener('DOMContentLoaded', initializeVoiceInterface);
+            
+            // Mock data binding for demonstration
+            window.mockData = {
+                apiStatus: 'Ready',
+                conversationStatus: 'Ready to Start Sales Conversation',
+                conversationTime: '00:00',
+                messageCount: mockConversation.length,
+                salesScore: '--',
+                engagementRate: '87%',
+                persuasionScore: '92',
+                objectionHandling: '8/10',
+                conversationFlow: '95%'
+            };
+        })();
+    </script>
+</body>
+</html>
